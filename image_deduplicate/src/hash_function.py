@@ -1,11 +1,20 @@
 import cv2
-from PIL import Image
 import numpy as np
-import os
 import logging
 from scipy.fftpack import dct, idct
 
-logging.basicConfig(level="INFO")
+
+# Create a custom logger
+logger = logging.getLogger(__name__)
+# Set the log level
+logger.setLevel(logging.DEBUG)
+# Create a console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+# Create a log formatter
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 
 
 class HashFunction:
@@ -13,50 +22,46 @@ class HashFunction:
     Hash function class to encode image into hexadecimal hash
     """
 
-    def __init__(self, dir_path: str):
-        self.img_hash_dic = {}
-        self.dir_path = dir_path
-
     @staticmethod
     def dct_2d(img):
+        """
+        Compute the two-dimensional discrete cosine transform (DCT) of an image.
+
+        Parameters:
+            img (ndarray): The input image.
+
+        Returns:
+            ndarray: The DCT of the input image.
+        """
         return dct(dct(img.T, norm="ortho").T, norm="ortho")
 
     def phash(self, image_path: str):
+        """
+        Hashing function for image
+        """
         img = cv2.imread(image_path)
-        img = cv2.resize(img, (32, 32), interpolation=cv2.INTER_AREA)
+        img = cv2.resize(img, (16, 16), interpolation=cv2.INTER_AREA)
         gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img_dct = self.dct_2d(gray_img)
         img_idct = dct(dct(img_dct.T, norm="ortho").T, norm="ortho")
         avg_dct = np.mean(img_dct)
         bits = np.asarray(img_dct) > avg_dct
         bit_string = "".join(str(bit) for bit in 1 * bits.flatten())
-        hexadecimal_hash = hex(int(bit_string, 2))
+        hexadecimal_hash = hex(int(bit_string, 2))[2:]
         return hexadecimal_hash
 
-    def img_hash_generator(self):
+    @staticmethod
+    def hamming_distance(hash1, hash2):
         """
-        List directory files and hash each of the files
+        Hamming dist to compute differences between two hash
         """
-        f_list = os.listdir(self.dir_path)
-        for file in f_list:
-            file_path = os.path.join(self.dir_path, file)
-            file_hash = self.phash(file_path)
-            yield file, file_hash
+        if len(hash1) != len(hash2):
+            raise ValueError("Both hashes must have the same length.")
 
-    def check_duplicates(self):
-        """
-        Check duplicates and store hashes in a dictionary
-        """
-        for file, file_hash in self.img_hash_generator():
-            if file_hash in self.img_hash_dic:
-                print(f"{file} is duplicated!")
-            else:
-                self.img_hash_dic[file_hash] = file
+        # Convert hexadecimal hashes to binary representations
+        bin_hash1 = bin(int(hash1, 16))[2:].zfill(len(hash1) * 4)
+        bin_hash2 = bin(int(hash2, 16))[2:].zfill(len(hash2) * 4)
 
-
-if __name__ == "__main__":
-    IMG_PATH = "/Users/maixueqiao/Downloads/project/makthemak/public/avatar.png"
-    IMG1_PATH = "/Users/maixueqiao/Downloads/project/makthemak/public/avatar.png"
-    DIR_PATH = "../sample_img"
-    hash_fn = HashFunction(dir_path=DIR_PATH)
-    hash_fn.check_duplicates()
+        # Calculate the Hamming distance
+        distance = sum(x1 != x2 for x1, x2 in zip(bin_hash1, bin_hash2))
+        return distance
