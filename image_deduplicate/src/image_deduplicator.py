@@ -21,19 +21,21 @@ class ImageDeduplicator:
     Image deduplicator class to encode image into hexadecimal hash
     """
 
-    def __init__(self, dir_path: str):
+    def __init__(self, dir_path: str, remove_dup: bool):
         self.hasher = HashFunction()
         self.img_hash_dic = {}
         self.similar_imgs = {}
         self.dir_path = dir_path
+        self.remove_dup = remove_dup
 
     def img_hash_generator(self, dir_path):
         """
-        List directory files and hash each of the files
+        List directory files and hash each o
+        f the files
         """
         f_list = os.listdir(dir_path)
         for file in f_list:
-            logger.info(f"Hashing file: {file}")
+            # logger.info(f"Hashing file: {file}")
             file_path = os.path.join(self.dir_path, file)
             file_hash = self.hasher.phash(file_path)
             yield file, file_hash
@@ -56,7 +58,7 @@ class ImageDeduplicator:
 
             if hamming_dist < 80 and hamming_dist != 0:
                 if file in self.similar_imgs:
-                    self.similar_imgs[file].append(v)
+                    self.similar_imgs[file].extend(v)
                 else:
                     self.similar_imgs[file] = [v]
 
@@ -68,7 +70,6 @@ class ImageDeduplicator:
         """
         f_list = os.listdir(self.dir_path)
         for file in f_list:
-            logger.info(f"Hashing file: {file}")
             file_path = os.path.join(self.dir_path, file)
             file_hash = self.hasher.phash(file_path)
             yield file, file_hash
@@ -78,33 +79,41 @@ class ImageDeduplicator:
         Check duplicates and store hashes in a dictionary
         """
         self.similar_imgs_d = {}
-        duplicated_pairs = []
+        duplicated_d = {}
         for file, file_hash in self.img_hash_generator():
             if file_hash in self.img_hash_dic:
-                duplicated_pairs.append((self.img_hash_dic[file_hash], file))
+                if file_hash in duplicated_d:
+                    duplicated_d[file_hash].append(file)
+                else:
+                    duplicated_d[file_hash] = [file]
             else:
                 self.img_hash_dic[file_hash] = file
 
             # get cloest hamming dist
             self.get_closest_hamming_distance(file, file_hash, self.img_hash_dic)
 
-        # logger.info(self.img_hash_dic)
-        return duplicated_pairs, self.similar_imgs
+        return duplicated_d, self.similar_imgs
 
     def execute(self):
-        duplicated_pairs, similar_imgs = self.check_duplicates()
+        duplicated_d, similar_imgs = self.check_duplicates()
         logger.info(f"Similar image dictionary: {similar_imgs}")
         logger.info(
-            f"Duplicated count: {len(duplicated_pairs)}, duplicated pairs: {duplicated_pairs}"
+            f"Duplicated count: {len(duplicated_d.values())}, duplicated pairs: {duplicated_d}"
         )
+        if self.remove_dup:
+            for _, v in duplicated_d.items():
+                for idx, _ in enumerate(v):
+                    logger.info(
+                        f"Removing duplicates: {os.path.join(self.dir_path, v[idx])}"
+                    )
 
 
 if __name__ == "__main__":
     # DIR_PATH = "../tests/sample_data"
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--dir_path", type=str)
+    parser.add_argument("--remove_dup", type=bool, default=False)
     args = parser.parse_args()
 
-    img_deduplicator = ImageDeduplicator(args.dir_path)
+    img_deduplicator = ImageDeduplicator(args.dir_path, args.remove_dup)
     img_deduplicator.execute()
