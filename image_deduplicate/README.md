@@ -9,9 +9,14 @@ The package uses perceptual hashing, a technique that converts images into compa
     - Customizable similarity threshold for hamming distance computation
 
 ## Installation
-To install project's dependencies,
+To install project's dependencies, 
 ```
-pip install -r requirements.txt
+conda env create -f environment.yml
+conda activate image_deduplicator  
 ```
 
 ## Usage
+To remove duplicated images, run
+```
+python image_deduplicator.py --dir_path {images_dir} --remove_dup True
+```
