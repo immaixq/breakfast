@@ -1,0 +1,9 @@
+name: image_deduplicator
+channels:
+    - conda-forge
+    - defaults
+dependencies:
+    - pip:
+      - opencv-contrib-python==4.6.0.66
+      - numpy==1.26.4
+      - scipy==1.13.1
