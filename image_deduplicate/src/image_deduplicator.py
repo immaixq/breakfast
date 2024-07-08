@@ -3,6 +3,7 @@ import os
 import tqdm as tqdm
 import logging
 from hash_function import HashFunction
+from heapq import heapify, heappush, heappop
 
 # Create a custom logger
 logger = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ class ImageDeduplicator:
         self.similar_imgs = {}
         self.dir_path = dir_path
         self.remove_dup = remove_dup
+        self.min_hamming_dist = 80
 
     def img_hash_generator(self, dir_path):
         """
@@ -51,19 +53,25 @@ class ImageDeduplicator:
         """
         Get similar images based on hamming distance threshold
         """
-
+        heap = []
+        k = 300
         hash_d_item = self.generate_next_item_from_hash_d(hash_d)
         for k, v in hash_d_item:
             logger.debug(f"FILENAME FROM DIC: {v}, CURRENT FILENAME: {file}")
             hamming_dist = self.hasher.hamming_distance(k, file_hash)
 
             if hamming_dist < 80 and hamming_dist != 0:
+                if len(heap) < k or hamming_dist < heap[0][0]:
+                    if len(heap) == k:
+                        heappop(heap)
+                    heappush(heap, (hamming_dist, v))
+                
                 if file in self.similar_imgs:
                     self.similar_imgs[file].append(v)
                 else:
                     self.similar_imgs[file] = [v]
-
-        return self.similar_imgs
+        
+        return self.similar_imgs, [v for _, v in heap]
 
     def img_hash_generator(self):
         """
@@ -91,13 +99,13 @@ class ImageDeduplicator:
                 self.img_hash_dic[file_hash] = file
 
             # get cloest hamming dist
-            self.get_closest_hamming_distance(file, file_hash, self.img_hash_dic)
+            self.similar_imgs, heap = self.get_closest_hamming_distance(file, file_hash, self.img_hash_dic)
 
-        return duplicated_d, self.similar_imgs
+        return duplicated_d, heap
 
     def execute(self):
-        duplicated_d, similar_imgs = self.check_duplicates()
-        logger.info(f"Similar image dictionary: {similar_imgs}")
+        duplicated_d, similar_heap = self.check_duplicates()
+        logger.info(f"Similar image heap: {similar_heap}")
         logger.info(
             f"Duplicated count: {len(duplicated_d.values())}, duplicated pairs: {duplicated_d}"
         )
