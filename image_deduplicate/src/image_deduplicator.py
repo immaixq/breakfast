@@ -1,5 +1,6 @@
 import argparse
 import os
+import tqdm as tqdm
 import logging
 from hash_function import HashFunction
 
@@ -34,8 +35,8 @@ class ImageDeduplicator:
         f the files
         """
         f_list = os.listdir(dir_path)
-        for file in f_list:
-            # logger.info(f"Hashing file: {file}")
+        for file in tqdm(f_list):
+            logger.info(f"Hashing file: {file}")
             file_path = os.path.join(self.dir_path, file)
             file_hash = self.hasher.phash(file_path)
             yield file, file_hash
@@ -58,7 +59,7 @@ class ImageDeduplicator:
 
             if hamming_dist < 80 and hamming_dist != 0:
                 if file in self.similar_imgs:
-                    self.similar_imgs[file].extend(v)
+                    self.similar_imgs[file].append(v)
                 else:
                     self.similar_imgs[file] = [v]
 
