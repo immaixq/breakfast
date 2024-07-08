@@ -3,7 +3,10 @@ channels:
     - conda-forge
     - defaults
 dependencies:
+    - pip=24.0
     - pip:
       - opencv-contrib-python==4.6.0.66
       - numpy==1.26.4
       - scipy==1.13.1
+      - pillow==10.3.0
+      - pillow-heif==0.17.0
