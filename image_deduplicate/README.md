@@ -18,7 +18,7 @@ conda activate image_deduplicator
 ```
 
 ## Usage
-To remove duplicated images, run
+To remove duplicated images, you can also remove n similar images by adding `--remove_n_similar_img { number of similar image to be removed }`
 ```
 # /src 
 
@@ -29,5 +29,12 @@ To convert image format, run
 ```
 # /src
 
-python utils.py --dir_path {images_dir} --output_format {desired extension format e.g .jpg}
+python utils.py --dir_path {images_dir_path} --output_format {desired extension format e.g .jpg}
+```
+
+To crop and resize image, 
+```
+# /src
+
+python utils.py --dir_path {images_dir_path} --output_dir {output_dir}
 ```
