@@ -18,11 +18,13 @@ conda activate image_deduplicator
 ```
 
 ## Usage
-To remove duplicated images, you can also remove n similar images by adding `--remove_n_similar_img { number of similar image to be removed }`
+To remove duplicated images, you can also remove n similar images by adding `--remove_n_similar_img { number of similar image to be removed }`. To define a hamming distance threshold, modify `--hamming_threshold { desired threshold }`, 
 ```
 # /src 
 
 python image_deduplicator.py --dir_path {images_dir} --remove_dup True
+
+python image_deduplicator.py --dir_path {images_dir} --remove_dup True --remove_n_similar_img {100} --hamming_threshold {80}
 ```
 
 To convert image format, run

@@ -23,7 +23,13 @@ class ImageDeduplicator:
     Image deduplicator class to encode image into hexadecimal hash
     """
 
-    def __init__(self, dir_path: str, remove_dup: bool, remove_n_similar_img: int):
+    def __init__(
+        self,
+        dir_path: str,
+        remove_dup: bool,
+        remove_n_similar_img: int,
+        hamming_threshold: int,
+    ):
         self.hasher = HashFunction()
         self.img_hash_dic = {}
         self.similar_imgs = {}
@@ -31,7 +37,7 @@ class ImageDeduplicator:
         self.dir_path = dir_path
         self.remove_dup = remove_dup
         self.remove_n_similar_img = remove_n_similar_img
-        self.min_hamming_dist = 80
+        self.hamming_threshold = hamming_threshold
 
     def img_hash_generator(self, dir_path):
         """
@@ -55,16 +61,15 @@ class ImageDeduplicator:
         """
         Get similar images based on hamming distance threshold
         """
-        top_n = 200
         hash_d_item = self.generate_next_item_from_hash_d(hash_d)
         for k, v in hash_d_item:
             logger.debug(f"FILENAME FROM DIC: {v}, CURRENT FILENAME: {file}")
             hamming_dist = self.hasher.hamming_distance(k, file_hash)
 
-            if hamming_dist < 80 and hamming_dist != 0:
+            if hamming_dist < self.hamming_threshold and hamming_dist != 0:
 
                 if (
-                    len(self.similar_heap) < top_n
+                    len(self.similar_heap) < self.remove_n_similar_img
                     or hamming_dist < self.similar_heap[0][0]
                 ):
                     if len(self.similar_heap) == k:
@@ -105,7 +110,11 @@ class ImageDeduplicator:
 
             # get cloest hamming dist
             self.similar_imgs, heap = self.get_closest_hamming_distance(
-                file, file_hash, self.img_hash_dic
+                file,
+                file_hash,
+                self.img_hash_dic,
+                self.hamming_threshold,
+                self.remove_n_similar_img,
             )
 
         return duplicated_d, heap
@@ -145,11 +154,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dir_path", type=str)
     parser.add_argument("--remove_dup", type=bool, default=False)
-    parser.add_argument("--remove_n_similar_img", type=bool, default=False)
+    parser.add_argument("--remove_n_similar_img", type=int, default=False)
+    parser.add_argument("--hamming_threshold", type=int, default=80)
 
     args = parser.parse_args()
 
     img_deduplicator = ImageDeduplicator(
-        args.dir_path, args.remove_dup, args.remove_n_similar_img
+        args.dir_path, args.remove_dup, args.remove_n_similar_img, args.hamming_threshold
     )
     img_deduplicator.execute()
