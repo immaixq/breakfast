@@ -1,0 +1,48 @@
+# Experiment settings
+experiment_name: "CLIP_Fine_Tuning"
+run_name: "baseline_run"
+
+# Model settings
+model_name: "openai/clip-vit-base-patch32"
+
+# Data settings
+img_paths_list: 
+  - "/home/mai/Downloads/ultramilk_fullcream"
+  - "/home/mai/Downloads/ultramilk_karamel"
+  - "/home/mai/Downloads/ultramilk_taro"
+  - "/home/mai/Downloads/ultramilk_lowfat"
+  - "/home/mai/Downloads/ultramilk_lowfat_coklat"
+  - "/home/mai/Downloads/ultramilk_mocha"
+  - "/home/mai/Downloads/ultramilk_strawberry"
+  - "/home/mai/Downloads/ultra_mimi_kids_cokelat"
+  - "/home/mai/Downloads/ultra_mimi_kids_fullcream"
+  - "/home/mai/Downloads/ultra_mimi_kids_stroberi"
+  - "/home/mai/Downloads/ultra_mimi_kids_vanilla"
+
+text_labels:
+  - "ultramilk_fullcream"
+  - "ultramilk_karamel"
+  - "ultramilk_taro"
+  - "ultramilk_lowfat"
+  - "ultramilk_lowfat_coklat"
+  - "ultramilk_mocha"
+  - "ultramilk_strawberry"
+  - "ultra_mimi_kids_cokelat"
+  - "ultra_mimi_kids_fullcream"
+  - "ultra_mimi_kids_stroberi"
+  - "ultra_mimi_kids_vanilla"
+
+
+batch_size: 8
+
+# logging and checkpoint
+log_dir: "./logs"
+checkpoint_dir: "./checkpoints"
+
+# Training settings
+num_epochs: 200
+learning_rate: 2e-5
+weight_decay: 0.01
+warmup_steps: 1000
+gradient_accumulation_steps: 1
+max_grad_norm: 1.0
