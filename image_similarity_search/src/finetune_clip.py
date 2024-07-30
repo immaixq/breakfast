@@ -74,7 +74,7 @@ def save_checkpoint(
     filepath = os.path.join(checkpoint_dir, filename)
     torch.save(state, filepath)
     if is_best:
-        best_filepath = os.path.join(checkpoint_dir, f"model_best_{filename}")
+        best_filepath = os.path.join(checkpoint_dir, f"model_best.pt")
         torch.save(state, best_filepath)
 
 
@@ -169,7 +169,9 @@ def main(config):
     metric_tracker = MetricTracker()
 
     checkpoint_dir = config["checkpoint_dir"]
-    train_dataloader = create_dataloader(config["img_paths_list"], config.get("batch_size", 8))
+    train_dataloader = create_dataloader(
+        config["img_paths_list"], config.get("batch_size", 8)
+    )
     model, optimiser = create_model_and_optimiser(config)
     start_epoch, best_loss = load_checkpoint(
         checkpoint_dir, "last_checkpoint.pt", model, optimiser, device
@@ -192,10 +194,10 @@ def main(config):
             "best_loss": best_loss,
         }
 
-        save_checkpoint(
-            checkpoint, is_best, checkpoint_dir, f"checkpoint_epoch_{epoch}.pt"
-        )
-        save_checkpoint(checkpoint, False, checkpoint_dir, "last_checkpoint.pt")
+        # save_checkpoint(
+        #     checkpoint, is_best, checkpoint_dir, f"checkpoint_epoch_{epoch}.pt"
+        # )
+        save_checkpoint(checkpoint, is_best, checkpoint_dir, "last_checkpoint.pt")
 
         plt.figure(figsize=(10, 5))
         losses = metric_tracker.get_metric("loss")
