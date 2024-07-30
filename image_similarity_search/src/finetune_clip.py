@@ -35,8 +35,17 @@ def create_dataloader(img_paths_list):
     img_path_list = []
 
     img_text_d = {
-        0: "class 1",
-        1: "class 2"
+        0: "ultramilk_fullcream",
+        1: "ultramilk_karamel",
+        2: "ultramilk_taro",
+        3: "ultramilk_lowfat",
+        4: "ultramilk_lowfat_cokelat",
+        5: "ultramilk_mocha",
+        6: "ultramilk_strawberry",
+        7: "ultra_mimi_kids_cokelat",
+        8: "ultra_mimi_kids_fullcream",
+        9: "ultra_mimi_kids_stroberi",
+        10: "ultra_mimi_kids_vanilla",
     }
 
     for idx, sub_dir in enumerate(img_paths_list):
@@ -71,6 +80,7 @@ def save_checkpoint(
 
 def load_checkpoint(checkpoint_dir: str, filename: str, model, optimiser, device):
     filepath = os.path.join(checkpoint_dir, filename)
+
     if os.path.isfile(filepath):
         checkpoint = torch.load(filepath, map_location=device)
         model.load_state_dict(checkpoint["state_dict"])
@@ -83,7 +93,8 @@ def load_checkpoint(checkpoint_dir: str, filename: str, model, optimiser, device
 def convert_models_to_fp32(model):
     for p in model.parameters():
         p.data = p.data.float()
-        p.grad.data = p.grad.data.float()
+        if p.grad is not None:
+            p.grad.data = p.grad.data.float()
 
 
 def train_epoch(
@@ -98,7 +109,7 @@ def train_epoch(
     loss_img = torch.nn.CrossEntropyLoss()
     loss_txt = torch.nn.CrossEntropyLoss()
 
-    for batch in tqdm(dataloader):
+    for batch_idx, batch in enumerate(tqdm(dataloader)):
         images, texts = batch
         images, texts = images.to(device), texts.to(device)
 
@@ -127,14 +138,15 @@ def train_epoch(
             optimiser.step()
             clip.model.convert_weights(model)
 
+        optimiser.zero_grad()
+
         with torch.no_grad():
             total_loss += loss.item()
 
-        # if i % 10 == 0:  # Log every 10 steps
-        #     logger.info(f"Epoch: {epoch}, Step: {i}, Loss: {loss.item():.4f}")
+        if batch_idx % 10 == 0:  # Log every 10 steps
+            logger.info(f"Epoch: {epoch}, Step: {batch_idx}, Loss: {loss.item():.4f}")
 
     avg_loss = total_loss / len(dataloader)
-    logger.info(f"Epoch: {epoch}, Average Loss: {avg_loss:.4f}")
     return avg_loss
 
 
@@ -156,19 +168,17 @@ def main(config):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     metric_tracker = MetricTracker()
 
-    # [TODO] setup log dir, set up checkpoint dir
     checkpoint_dir = config["checkpoint_dir"]
-    train_dataloader = create_dataloader(config["img_paths_list"])
+    train_dataloader = create_dataloader(config["img_paths_list"], config.get("batch_size", 8))
     model, optimiser = create_model_and_optimiser(config)
     start_epoch, best_loss = load_checkpoint(
-        checkpoint_dir, "last_checpoint.pt", model, optimiser, device
+        checkpoint_dir, "last_checkpoint.pt", model, optimiser, device
     )
 
     for epoch in range(start_epoch, config["num_epochs"]):
         ep_loss = train_epoch(model, train_dataloader, optimiser, epoch, device, logger)
         metric_tracker.update("loss", ep_loss, epoch)
 
-        # [TODO] save checkpoint
         logger.info(f"Epoch: {epoch}, loss: {ep_loss}")
 
         is_best = ep_loss < best_loss
@@ -185,7 +195,7 @@ def main(config):
         save_checkpoint(
             checkpoint, is_best, checkpoint_dir, f"checkpoint_epoch_{epoch}.pt"
         )
-        save_checkpoint(checkpoint, False, checkpoint_dir, "last_checpoint.pt")
+        save_checkpoint(checkpoint, False, checkpoint_dir, "last_checkpoint.pt")
 
         plt.figure(figsize=(10, 5))
         losses = metric_tracker.get_metric("loss")
@@ -198,7 +208,7 @@ def main(config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="clip fine tuning")
-    parser.add_argument("--config", type=str, default="config.yaml")
+    parser.add_argument("--config", type=str, default="../config.yaml")
     args = parser.parse_args()
 
     config = load_config(args.config)
