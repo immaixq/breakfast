@@ -8,7 +8,7 @@ from heapq import heapify, heappush, heappop
 # Create a custom logger
 logger = logging.getLogger(__name__)
 # Set the log level
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 # Create a console handler
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
@@ -23,21 +23,13 @@ class ImageDeduplicator:
     Image deduplicator class to encode image into hexadecimal hash
     """
 
-    def __init__(
-        self,
-        dir_path: str,
-        remove_dup: bool,
-        remove_n_similar_img: int,
-        hamming_threshold: int,
-    ):
+    def __init__(self, dir_path: str, remove_dup: bool):
         self.hasher = HashFunction()
         self.img_hash_dic = {}
         self.similar_imgs = {}
-        self.similar_heap = []
         self.dir_path = dir_path
         self.remove_dup = remove_dup
-        self.remove_n_similar_img = remove_n_similar_img
-        self.hamming_threshold = hamming_threshold
+        self.min_hamming_dist = 80
 
     def img_hash_generator(self, dir_path):
         """
@@ -45,6 +37,7 @@ class ImageDeduplicator:
         f the files
         """
         f_list = os.listdir(dir_path)
+        logger.info(f"File list: {f_list}")
         for file in tqdm(f_list):
             logger.info(f"Hashing file: {file}")
             file_path = os.path.join(self.dir_path, file)
@@ -61,27 +54,25 @@ class ImageDeduplicator:
         """
         Get similar images based on hamming distance threshold
         """
+        heap = []
+        k = 300
         hash_d_item = self.generate_next_item_from_hash_d(hash_d)
         for k, v in hash_d_item:
             logger.debug(f"FILENAME FROM DIC: {v}, CURRENT FILENAME: {file}")
             hamming_dist = self.hasher.hamming_distance(k, file_hash)
 
-            if hamming_dist < self.hamming_threshold and hamming_dist != 0:
-
-                if (
-                    len(self.similar_heap) < self.remove_n_similar_img
-                    or hamming_dist < self.similar_heap[0][0]
-                ):
-                    if len(self.similar_heap) == k:
-                        heappop(self.similar_heap)
-                    heappush(self.similar_heap, (hamming_dist, v))
+            if hamming_dist < 80 and hamming_dist != 0:
+                if len(heap) < k or hamming_dist < heap[0][0]:
+                    if len(heap) == k:
+                        heappop(heap)
+                    heappush(heap, (hamming_dist, v))
 
                 if file in self.similar_imgs:
                     self.similar_imgs[file].append(v)
                 else:
                     self.similar_imgs[file] = [v]
 
-        return self.similar_imgs, [v for _, v in self.similar_heap]
+        return self.similar_imgs, [v for _, v in heap]
 
     def img_hash_generator(self):
         """
@@ -110,11 +101,7 @@ class ImageDeduplicator:
 
             # get cloest hamming dist
             self.similar_imgs, heap = self.get_closest_hamming_distance(
-                file,
-                file_hash,
-                self.img_hash_dic,
-                self.hamming_threshold,
-                self.remove_n_similar_img,
+                file, file_hash, self.img_hash_dic
             )
 
         return duplicated_d, heap
@@ -131,35 +118,16 @@ class ImageDeduplicator:
                     logger.info(
                         f"Removing duplicates: {os.path.join(self.dir_path, v[idx])}"
                     )
-                    os.remove(os.path.join(self.dir_path, v[idx]))
-                    logger.info(
-                        f"Remaining images count: {len(os.listdir(self.dir_path))}"
-                    )
-
-        if self.remove_n_similar_img:
-            for idx, x in enumerate(similar_heap):
-                logger.info(
-                    f"Removing similar images: {os.path.join(self.dir_path, x)}"
-                )
-                try:
-                    os.remove(os.path.join(self.dir_path, x))
-                    logger.info(
-                        f"Remaining images count: {len(os.listdir(self.dir_path))}"
-                    )
-                except:
-                    pass
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dir_path", type=str)
     parser.add_argument("--remove_dup", type=bool, default=False)
-    parser.add_argument("--remove_n_similar_img", type=int, default=False)
-    parser.add_argument("--hamming_threshold", type=int, default=80)
-
     args = parser.parse_args()
-
-    img_deduplicator = ImageDeduplicator(
-        args.dir_path, args.remove_dup, args.remove_n_similar_img, args.hamming_threshold
-    )
+    img_deduplicator = ImageDeduplicator(args.dir_path, args.remove_dup)
     img_deduplicator.execute()
+
+
+if __name__ == "__main__":
+    main()
