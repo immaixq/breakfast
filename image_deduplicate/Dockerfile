@@ -18,8 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src /app/src
 COPY tests /app/tests
-COPY sample_img /app/images
 
 WORKDIR /app
 
-CMD [ "python", "main.py" ]
+ENTRYPOINT [ "python", "src/image_deduplicator.py" ]
